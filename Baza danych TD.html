@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TD Panel — Tracking Division (HTML)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body{background:#0f172a;color:#f1f5f9}
+    .navbar{background:#1e293b}
+    .card{background:#1e293b;border:none;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+    .table{color:#f1f5f9}
+    .table thead{background:#0ea5e9;color:#fff}
+    .btn-primary,.btn-info{background:#0ea5e9;border:0}
+    .btn-primary:hover,.btn-info:hover{background:#0284c7}
+    a{color:#93c5fd}
+    .badge-role{background:#0ea5e9}
+    .pointer{cursor:pointer}
+    .form-text-muted{color:#94a3b8}
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-dark px-3">
+  <a class="navbar-brand fw-bold" href="#">📂 TD Panel (HTML)</a>
+  <div class="d-flex align-items-center gap-2">
+    <span id="roleBadge" class="badge badge-role d-none">Zarząd</span>
+    <button id="btnSettings" class="btn btn-secondary btn-sm d-none" data-bs-toggle="modal" data-bs-target="#settingsModal">Ustawienia</button>
+    <button id="btnLogin" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#loginModal">Zaloguj (Zarząd)</button>
+    <button id="btnLogout" class="btn btn-danger btn-sm d-none">Wyloguj</button>
+  </div>
+</nav>
+
+<div class="container my-4">
+  <div id="alerts"></div>
+
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <button id="btnAddAgent" class="btn btn-primary btn-sm d-none" data-bs-toggle="modal" data-bs-target="#agentModal">➕ Dodaj Agenta</button>
+    <button id="btnExportJSON" class="btn btn-info btn-sm">📄 Eksport JSON</button>
+    <button id="btnExportCSV" class="btn btn-info btn-sm">📄 Eksport CSV</button>
+
+    <label class="btn btn-outline-light btn-sm position-relative">
+      📥 Import JSON
+      <input id="importJSON" type="file" accept=".json,application/json" hidden>
+    </label>
+    <label class="btn btn-outline-light btn-sm position-relative">
+      📥 Import CSV
+      <input id="importCSV" type="file" accept=".csv,text/csv" hidden>
+    </label>
+
+    <div class="ms-auto d-flex gap-2">
+      <input id="searchInput" type="search" class="form-control form-control-sm" placeholder="Szukaj (UID/Imię/Nazwisko/Ranga)">
+      <select id="rankFilter" class="form-select form-select-sm" style="max-width:220px">
+        <option value="">— filtruj po randze —</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card p-3">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle" id="agentsTable">
+        <thead>
+          <tr>
+            <th style="min-width:120px">UID</th>
+            <th style="min-width:120px">Imię</th>
+            <th style="min-width:140px">Nazwisko</th>
+            <th style="min-width:140px">Ranga</th>
+            <th style="min-width:140px">Szkolenia (liczba)</th>
+            <th style="min-width:160px">Akcje</th>
+          </tr>
+        </thead>
+        <tbody id="agentsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Login (Zarząd) -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="loginForm">
+      <div class="modal-header">
+        <h5 class="modal-title">Logowanie — Zarząd</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Hasło</label>
+          <input type="password" class="form-control" id="loginPass" required>
+          <div class="form-text form-text-muted">Domyślne przy pierwszym uruchomieniu: <code>admin123</code></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" type="submit">Zaloguj</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Ustawienia -->
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="settingsForm">
+      <div class="modal-header">
+        <h5 class="modal-title">Ustawienia — Zmiana hasła Zarządu</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Obecne hasło</label>
+          <input type="password" class="form-control" id="curPass" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Nowe hasło</label>
+          <input type="password" class="form-control" id="newPass" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Powtórz nowe hasło</label>
+          <input type="password" class="form-control" id="repPass" required>
+        </div>
+        <div class="form-text form-text-muted">Hasło zapisywane jest lokalnie (localStorage) — rozwiązanie testowe, nieprodukcyjne.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" type="submit">Zmień hasło</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Dodaj/Edytuj Agenta -->
+<div class="modal fade" id="agentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="agentForm">
+      <div class="modal-header">
+        <h5 class="modal-title" id="agentModalTitle">Dodaj Agenta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="agentId">
+        <div class="mb-2">
+          <label class="form-label">UID</label>
+          <input type="text" class="form-control" id="uid" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Imię</label>
+          <input type="text" class="form-control" id="imie" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Nazwisko</label>
+          <input type="text" class="form-control" id="nazwisko" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Ranga</label>
+          <input type="text" class="form-control" id="ranga" required list="ranksList">
+          <datalist id="ranksList"></datalist>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" type="submit">Zapisz</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Profil Agenta (Szkolenia) -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" id="profileContent">
+      <div class="modal-header">
+        <h5 class="modal-title" id="profileTitle">Profil Agenta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+      </div>
+      <div class="modal-body">
+        <div id="profileBody"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/** =======================
+ *  Magazyn danych (localStorage)
+ *  ======================= */
+const LS_KEYS = {
+  AGENTS: 'td_agents',
+  PASS_SALT: 'td_pass_salt',
+  PASS_HASH: 'td_pass_hash'
+};
+
+let state = {
+  agents: [],
+  manager: false,
+  ranks: []
+};
+
+function saveAgents() {
+  localStorage.setItem(LS_KEYS.AGENTS, JSON.stringify(state.agents));
+  buildRankFilter();
+}
+function loadAgents() {
+  const raw = localStorage.getItem(LS_KEYS.AGENTS);
+  state.agents = raw ? JSON.parse(raw) : [];
+  buildRankFilter();
+}
+
+/** =======================
+ *  Hashowanie hasła (Web Crypto)
+ *  ======================= */
+async function sha256Hex(str) {
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function getSalt() {
+  let salt = localStorage.getItem(LS_KEYS.PASS_SALT);
+  if (!salt) {
+    salt = crypto.getRandomValues(new Uint8Array(16)).join('.');
+    localStorage.setItem(LS_KEYS.PASS_SALT, salt);
+  }
+  return salt;
+}
+async function ensureDefaultPassword() {
+  if (!localStorage.getItem(LS_KEYS.PASS_HASH)) {
+    const salt = getSalt();
+    const hash = await sha256Hex(salt + 'admin123');
+    localStorage.setItem(LS_KEYS.PASS_HASH, hash);
+  }
+}
+async function login(pass) {
+  const salt = getSalt();
+  const hash = await sha256Hex(salt + pass);
+  const stored = localStorage.getItem(LS_KEYS.PASS_HASH);
+  return hash === stored;
+}
+async function changePassword(cur, next) {
+  const ok = await login(cur);
+  if (!ok) throw new Error('Błędne obecne hasło.');
+  const salt = getSalt();
+  const newHash = await sha256Hex(salt + next);
+  localStorage.setItem(LS_KEYS.PASS_HASH, newHash);
+}
+
+/** =======================
+ *  UI: alerty
+ *  ======================= */
+function alertBox(type, text) {
+  const el = document.createElement('div');
+  el.className = `alert alert-${type} alert-dismissible fade show`;
+  el.innerHTML = `${text}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+  document.getElementById('alerts').appendChild(el);
+  setTimeout(()=>{ try{el.remove();}catch{} }, 5000);
+}
+
+/** =======================
+ *  Render: tabela agentów
+ *  ======================= */
+function renderAgents() {
+  const tbody = document.getElementById('agentsTbody');
+  tbody.innerHTML = '';
+
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const rf = (document.getElementById('rankFilter').value || '').toLowerCase();
+
+  const filtered = state.agents.filter(a => {
+    const hit = (a.uid + ' ' + a.imie + ' ' + a.nazwisko + ' ' + a.ranga).toLowerCase().includes(q);
+    const rankOk = !rf || (a.ranga || '').toLowerCase() === rf;
+    return hit && rankOk;
+  });
+
+  filtered.forEach(a => {
+    const tr = document.createElement('tr');
+
+    const trainingsCount = (a.trainings || []).length;
+
+    tr.innerHTML = `
+      <td class="pointer text-decoration-underline" data-action="profile">${escapeHtml(a.uid)}</td>
+      <td>${escapeHtml(a.imie)}</td>
+      <td>${escapeHtml(a.nazwisko)}</td>
+      <td>${escapeHtml(a.ranga)}</td>
+      <td>${trainingsCount}</td>
+      <td>
+        <button class="btn btn-sm btn-info me-1 ${state.manager ? '' : 'd-none'}" data-action="edit">✏️</button>
+        <button class="btn btn-sm btn-danger ${state.manager ? '' : 'd-none'}" data-action="del">🗑️</button>
+      </td>
+    `;
+
+    tr.querySelector('[data-action="profile"]').addEventListener('click', () => openProfile(a.id));
+    if (state.manager) {
+      tr.querySelector('[data-action="edit"]').addEventListener('click', () => openAgentModal('edit', a.id));
+      tr.querySelector('[data-action="del"]').addEventListener('click', () => deleteAgent(a.id));
+    }
+
+    tbody.appendChild(tr);
+  });
+}
+
+function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/** =======================
+ *  Rank: datalist + filtr
+ *  ======================= */
+function buildRankFilter(){
+  const ranks = Array.from(new Set((state.agents || []).map(a => a.ranga).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'pl'));
+  state.ranks = ranks;
+  const select = document.getElementById('rankFilter');
+  const dl = document.getElementById('ranksList');
+  select.innerHTML = `<option value="">— filtruj po randze —</option>` + ranks.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+  dl.innerHTML = ranks.map(r => `<option value="${escapeHtml(r)}"></option>`).join('');
+}
+
+/** =======================
+ *  CRUD agentów
+ *  ======================= */
+function newId(){ return crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36)+Math.random().toString(36).slice(2)); }
+
+function openAgentModal(mode='add', id=null){
+  if(!state.manager){ alertBox('warning','Tylko Zarząd może edytować.'); return; }
+  const title = document.getElementById('agentModalTitle');
+  const form = document.getElementById('agentForm');
+  form.reset();
+  document.getElementById('agentId').value = id || '';
+  if(mode==='add'){
+    title.textContent = 'Dodaj Agenta';
+  } else {
+    title.textContent = 'Edytuj Agenta';
+    const a = state.agents.find(x=>x.id===id);
+    if(!a) return;
+    document.getElementById('uid').value = a.uid || '';
+    document.getElementById('imie').value = a.imie || '';
+    document.getElementById('nazwisko').value = a.nazwisko || '';
+    document.getElementById('ranga').value = a.ranga || '';
+  }
+  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('agentModal'));
+  modal.show();
+}
+
+document.getElementById('agentForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  if(!state.manager){ alertBox('warning','Tylko Zarząd może edytować.'); return; }
+  const id = document.getElementById('agentId').value || null;
+  const uid = document.getElementById('uid').value.trim();
+  const imie = document.getElementById('imie').value.trim();
+  const nazwisko = document.getElementById('nazwisko').value.trim();
+  const ranga = document.getElementById('ranga').value.trim();
+
+  if(!uid || !imie || !nazwisko || !ranga){ alertBox('danger','Wypełnij wszystkie pola.'); return; }
+
+  // unikalny UID
+  const conflict = state.agents.some(a => a.uid.toLowerCase()===uid.toLowerCase() && a.id!==id);
+  if(conflict){ alertBox('danger','UID już istnieje.'); return; }
+
+  if(!id){
+    state.agents.unshift({ id:newId(), uid, imie, nazwisko, ranga, trainings: [] });
+    alertBox('success','Dodano agenta.');
+  }else{
+    const a = state.agents.find(x=>x.id===id);
+    if(!a) return;
+    a.uid=uid; a.imie=imie; a.nazwisko=nazwisko; a.ranga=ranga;
+    alertBox('success','Zapisano zmiany.');
+  }
+  saveAgents();
+  renderAgents();
+  bootstrap.Modal.getInstance(document.getElementById('agentModal')).hide();
+});
+
+function deleteAgent(id){
+  if(!state.manager){ alertBox('warning','Tylko Zarząd może usuwać.'); return; }
+  if(!confirm('Usunąć agenta?')) return;
+  state.agents = state.agents.filter(a=>a.id!==id);
+  saveAgents();
+  renderAgents();
+  alertBox('success','Usunięto agenta.');
+}
+
+/** =======================
+ *  Profil agenta + szkolenia
+ *  ======================= */
+function openProfile(id){
+  const a = state.agents.find(x=>x.id===id);
+  if(!a) return;
+
+  const body = document.getElementById('profileBody');
+  const title = document.getElementById('profileTitle');
+  title.textContent = `${a.imie} ${a.nazwisko} — ${a.ranga} (UID: ${a.uid})`;
+
+  const rows = (a.trainings||[]).map((t,idx)=>`
+    <tr>
+      <td>${escapeHtml(t.nazwa)}</td>
+      <td>${escapeHtml(t.data)}</td>
+      <td>
+        <button class="btn btn-sm btn-danger ${state.manager ? '' : 'd-none'}" data-del="${idx}">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+
+  body.innerHTML = `
+    <div class="card p-3 mb-3">
+      <h6 class="mb-0">Dane agenta</h6>
+      <div class="small text-secondary">Kliknij „Edytuj” w tabeli głównej, aby zmienić dane.</div>
+    </div>
+
+    <div class="card p-3">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h5 class="mb-0">Szkolenia</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead><tr><th>Nazwa</th><th>Data</th><th>Akcje</th></tr></thead>
+          <tbody id="trainBody">${rows}</tbody>
+        </table>
+      </div>
+
+      <form id="trainForm" class="${state.manager ? '' : 'd-none'}">
+        <div class="row g-2">
+          <div class="col-md-7">
+            <input type="text" class="form-control" id="trainName" placeholder="Nazwa szkolenia" required>
+          </div>
+          <div class="col-md-3">
+            <input type="date" class="form-control" id="trainDate" required>
+          </div>
+          <div class="col-md-2 d-grid">
+            <button class="btn btn-primary" type="submit">Dodaj</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  `;
+
+  // zdarzenia szkolenia
+  const tBody = body.querySelector('#trainBody');
+  tBody.querySelectorAll('button[data-del]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(!state.manager){ alertBox('warning','Tylko Zarząd może usuwać.'); return; }
+      const idx = parseInt(btn.getAttribute('data-del'),10);
+      a.trainings.splice(idx,1);
+      saveAgents();
+      openProfile(id); // odśwież widok
+      alertBox('success','Usunięto szkolenie.');
+    });
+  });
+
+  const form = body.querySelector('#trainForm');
+  if (form){
+    form.addEventListener('submit', e=>{
+      e.preventDefault();
+      const nazwa = body.querySelector('#trainName').value.trim();
+      const data  = body.querySelector('#trainDate').value;
+      if(!nazwa || !data){ alertBox('danger','Uzupełnij nazwę i datę.'); return; }
+      a.trainings = a.trainings || [];
+      a.trainings.unshift({nazwa, data});
+      saveAgents();
+      openProfile(id);
+      alertBox('success','Dodano szkolenie.');
+    });
+  }
+
+  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('profileModal'));
+  modal.show();
+}
+
+/** =======================
+ *  Import / Eksport
+ *  ======================= */
+function download(filename, text, type='text/plain'){
+  const blob = new Blob([text], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  a.remove(); URL.revokeObjectURL(url);
+}
+
+function exportJSON(){
+  download('agents.json', JSON.stringify(state.agents, null, 2), 'application/json');
+}
+function exportCSV(){
+  const header = ['UID','Imię','Nazwisko','Ranga','Szkolenia (nazwa|data;...)'];
+  const lines = [header.join(',')];
+  state.agents.forEach(a=>{
+    const tr = (a.trainings||[]).map(t=>`${escapeCsv(t.nazwa)}|${escapeCsv(t.data)}`).join(';');
+    lines.push([a.uid,a.imie,a.nazwisko,a.ranga,tr].map(escapeCsv).join(','));
+  });
+  download('agents.csv', lines.join('\n'), 'text/csv');
+}
+function escapeCsv(v){
+  v = String(v ?? '');
+  if(/[",\n]/.test(v)) return `"${v.replace(/"/g,'""')}"`;
+  return v;
+}
+
+document.getElementById('importJSON').addEventListener('change', async e=>{
+  const file = e.target.files[0]; if(!file) return;
+  try{
+    const text = await file.text();
+    const arr = JSON.parse(text);
+    if(!Array.isArray(arr)) throw new Error('Zły format JSON.');
+    // prosta walidacja
+    arr.forEach(a=>{
+      if(!a.id) a.id = newId();
+      a.trainings = Array.isArray(a.trainings) ? a.trainings : [];
+    });
+    state.agents = arr;
+    saveAgents(); renderAgents();
+    alertBox('success','Zaimportowano JSON.');
+  }catch(err){ alertBox('danger','Błąd importu JSON: '+err.message); }
+  e.target.value = '';
+});
+
+document.getElementById('importCSV').addEventListener('change', async e=>{
+  const file = e.target.files[0]; if(!file) return;
+  try{
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+    const [header, ...rows] = lines;
+    const head = header.toLowerCase();
+    if(!(head.includes('uid') && head.includes('imi') && head.includes('nazw') && head.includes('ranga'))){
+      throw new Error('Wymagane kolumny: UID, Imię, Nazwisko, Ranga, (opcjonalnie Szkolenia).');
+    }
+    const parsed = rows.map(parseCsvLine).filter(Boolean);
+    parsed.forEach(cols=>{
+      const [uid, imie, nazwisko, ranga, szkoleniaRaw=''] = cols;
+      if(!uid) return;
+      // jeśli istnieje agent z tym UID -> pomiń (nie duplikuj)
+      if(state.agents.some(a=>a.uid.toLowerCase()===String(uid).toLowerCase())) return;
+      const trainings = String(szkoleniaRaw||'').split(';').filter(Boolean).map(pair=>{
+        const [nazwa,data] = pair.split('|');
+        return {nazwa:nazwa||'', data:data||''};
+      });
+      state.agents.push({ id:newId(), uid, imie, nazwwisko:nazwisko, nazwisko, ranga, trainings });
+    });
+    saveAgents(); renderAgents();
+    alertBox('success','Zaimportowano CSV.');
+  }catch(err){ alertBox('danger','Błąd importu CSV: '+err.message); }
+  e.target.value = '';
+});
+
+function parseCsvLine(line){
+  const out = []; let cur = ''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch = line[i];
+    if(inQ){
+      if(ch === '"'){
+        if(line[i+1] === '"'){ cur += '"'; i++; }
+        else inQ = false;
+      } else { cur += ch; }
+    } else {
+      if(ch === '"'){ inQ = true; }
+      else if(ch === ','){ out.push(cur); cur=''; }
+      else { cur += ch; }
+    }
+  }
+  out.push(cur);
+  return out.map(s=>s.trim());
+}
+
+/** =======================
+ *  Logowanie (Zarząd)
+ *  ======================= */
+document.getElementById('loginForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const pass = document.getElementById('loginPass').value;
+  const ok = await login(pass);
+  if(ok){
+    state.manager = true;
+    document.getElementById('loginPass').value = '';
+    bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+    applyRoleUI();
+    alertBox('success','Zalogowano (Zarząd).');
+  } else {
+    alertBox('danger','Błędne hasło.');
+  }
+});
+
+document.getElementById('btnLogout').addEventListener('click', ()=>{
+  state.manager = false;
+  applyRoleUI();
+  alertBox('success','Wylogowano.');
+});
+
+document.getElementById('settingsForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  if(!state.manager){ alertBox('warning','Tylko Zarząd może zmieniać hasło.'); return; }
+  const cur = document.getElementById('curPass').value;
+  const neo = document.getElementById('newPass').value;
+  const rep = document.getElementById('repPass').value;
+  if(neo !== rep){ alertBox('danger','Nowe hasła nie są identyczne.'); return; }
+  try{
+    await changePassword(cur, neo);
+    document.getElementById('curPass').value = '';
+    document.getElementById('newPass').value = '';
+    document.getElementById('repPass').value = '';
+    bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
+    alertBox('success','Hasło zmienione.');
+  }catch(err){
+    alertBox('danger', err.message);
+  }
+});
+
+function applyRoleUI(){
+  document.getElementById('btnAddAgent').classList.toggle('d-none', !state.manager);
+  document.getElementById('btnSettings').classList.toggle('d-none', !state.manager);
+  document.getElementById('btnLogout').classList.toggle('d-none', !state.manager);
+  document.getElementById('btnLogin').classList.toggle('d-none', !!state.manager);
+  document.getElementById('roleBadge').classList.toggle('d-none', !state.manager);
+  renderAgents(); // pokaż/ukryj przyciski akcji
+}
+
+/** =======================
+ *  Inicjalizacja
+ *  ======================= */
+document.getElementById('btnExportJSON').addEventListener('click', exportJSON);
+document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
+
+document.getElementById('searchInput').addEventListener('input', renderAgents);
+document.getElementById('rankFilter').addEventListener('change', renderAgents);
+
+document.getElementById('btnAddAgent').addEventListener('click', () => openAgentModal('add'));
+document.getElementById('btnLogout').addEventListener('click', ()=>{});
+
+window.addEventListener('DOMContentLoaded', async ()=>{
+  await ensureDefaultPassword();
+  loadAgents();
+  renderAgents();
+  applyRoleUI();
+
+  // jeśli pusto, dodaj przykładowy rekord
+  if(state.agents.length===0){
+    state.agents.push({
+      id:newId(), uid:'TD-001', imie:'Alex', nazwisko:'Morgan', ranga:'Senior TD',
+      trainings:[
+        {nazwa:'Śledzenie GPS — zaawansowane', data:'2025-03-15'},
+        {nazwa:'Operacje niejawne', data:'2025-05-09'}
+      ]
+    });
+    state.agents.push({
+      id:newId(), uid:'TD-002', imie:'Jordan', nazwisko:'Kowalski', ranga:'TD Operative',
+      trainings:[{nazwa:'Antykradzież — procedury', data:'2025-01-20'}]
+    });
+    saveAgents(); renderAgents();
+    alertBox('info','Załadowano przykładowe dane. Możesz je usunąć lub nadpisać importem.');
+  }
+});
+
+/** =======================
+ *  Pomocnicze
+ *  ======================= */
+document.getElementById('btnLogin').addEventListener('click', ()=>{
+  document.getElementById('loginPass').value = '';
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
